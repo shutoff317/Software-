@@ -2,9 +2,8 @@ name: Telegram Job Post Bot
 
 on:
   schedule:
-    # Har 6 ghante me run hoga (Aap ise apne hisaab se change kar sakte hain)
     - cron: '0 */6 * * *'
-  workflow_dispatch: # Manual run karne ke liye button
+  workflow_dispatch:
 
 jobs:
   run-bot:
@@ -26,6 +25,12 @@ jobs:
       - name: Run bot
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEgreSQL_CHANNEL_ID if false else secrets.TELEGRAM_CHANNEL_ID }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
         run: |
           python bot.py
+
+      - name: Commit updated JSON file
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update posted_jobs.json with new vacancies"
+          file_pattern: posted_jobs.json
