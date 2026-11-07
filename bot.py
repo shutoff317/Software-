@@ -1,11 +1,7 @@
 import json
 import os
 from bs4 import BeautifulSoup
-import dotenv
-from dotenv import load_dotenv
-
-# .env file load karne ki koshish
-load_dotenv()
+import requests
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
@@ -90,9 +86,7 @@ def fetch_and_post_vacancies():
   print(f"Total posts found on page: {len(posts)}")
 
   if not posts:
-    print(
-        "❌ Koi posts nahi mile! HTML structure match nahi ho raha."
-    )
+    print("❌ Koi posts nahi mile! HTML structure match nahi ho raha.")
     return
 
   posted_jobs = load_posted_jobs()
@@ -105,7 +99,6 @@ def fetch_and_post_vacancies():
         or post.find("a", class_="timestamp-link")
     )
 
-    # General fallback for title & link
     link_tag = post.find("a")
     if title_tag and title_tag.find("a"):
       title = title_tag.find("a").text.strip()
@@ -132,7 +125,7 @@ def fetch_and_post_vacancies():
         posted_jobs.append(link)
         new_posts_found = True
     else:
-      print(f"-> Yeh job pehle se posted_jobs.json mein hai, skip kiya.")
+      print("-> Yeh job pehle se posted_jobs.json mein hai, skip kiya.")
 
   if new_posts_found:
     save_posted_jobs(posted_jobs)
