@@ -51,7 +51,7 @@ def fetch_and_post_vacancies():
       )
   }
 
-  print(f"Fetching from {blog_url}...")
+  print(f"Fetching from {blog_url}")
   response = requests.get(blog_url, headers=headers)
 
   if response.status_code != 200:
