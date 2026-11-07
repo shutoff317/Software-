@@ -1,6 +1,0 @@
-- name: Run Telegram Bot
-  env:
-    BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-    CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
-    ADMIN_IDS: ${{ secrets.ADMIN_IDS }}
-  run: python bot.py
