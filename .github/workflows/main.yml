@@ -21,7 +21,7 @@ jobs:
         run: python bot.py
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT_ID: "@fresheradd"
           SITE_URL: https://coursecertificate231.blogspot.com/
           APPLY_LINK: https://coursecertificate231.blogspot.com/
       - name: Save posted jobs
