@@ -60,6 +60,11 @@ def headings_from_browser():
                 pg.wait_for_timeout(2500)
             except Exception:
                 break
+        body = pg.inner_text("body")
+        if "unusual traffic" in body.lower():
+            print("[warn] Google ne captcha diya (GitHub server IP block)")
+            b.close()
+            return []
         found = pg.evaluate(js, [CARD_SELECTOR, sorted(SKIP)])
         if not found:                            # debug: page par kya dikha
             print("[debug] page text:\n", pg.inner_text("body")[:1500])
@@ -67,10 +72,35 @@ def headings_from_browser():
     return found
 
 
+
+def headings_from_apis():
+    """Site block ho to wahi public job APIs se seedha headings."""
+    heads = []
+    def fetch(url):
+        try:
+            r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=25)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            print(f"[warn] {url[:50]} failed: {e}")
+            return {}
+    heads += [j.get("title", "") for j in fetch("https://remotive.com/api/remote-jobs?limit=40").get("jobs", [])]
+    heads += [j.get("title", "") for j in fetch("https://www.arbeitnow.com/api/job-board-api").get("data", [])[:40]]
+    heads += [j.get("jobTitle", "") for j in fetch("https://jobicy.com/api/v2/remote-jobs?count=30").get("jobs", [])]
+    return [h.strip() for h in heads if h and len(h.strip()) >= 6]
+
+
 def get_headings():
     heads = headings_from_feed()
     if not heads:
-        heads = headings_from_browser()
+        try:
+            heads = headings_from_browser()
+        except Exception as e:
+            print("[warn] browser mode failed:", e)
+            heads = []
+    if not heads:
+        print("[info] site se nahi mila, APIs se le raha hoon")
+        heads = headings_from_apis()
     seen, uniq = set(), []
     for h in heads:
         if h.lower() not in seen:
@@ -114,7 +144,7 @@ def main():
     new = [h for h in get_headings() if key(h) not in seen][:MAX_POSTS]
     posted = 0
     for h in new:
-        msg = (f"🏢 <b>{html.escape(h)}</b>\n\n"
+        msg = (f"🏢 <b>{html.escape(html.unescape(h))}</b>\n\n"
                f"✅ Hiring now!\n"
                f"👉 <a href=\"{html.escape(APPLY_LINK)}\">Apply Here</a>")
         if send(msg):
