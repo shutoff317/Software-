@@ -1,6 +1,6 @@
 """Telegram bot: aapki website se company/job ki heading uthata hai,
 aur har post me apply link hamesha aapka blog link lagata hai."""
-import os, json, time, hashlib, html
+import os, re, json, time, hashlib, html
 import requests
 
 BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
@@ -9,6 +9,8 @@ SITE_URL = os.getenv("SITE_URL", "https://coursecertificate231.blogspot.com/")
 APPLY_LINK = os.getenv("APPLY_LINK", "https://coursecertificate231.blogspot.com/")
 CARD_SELECTOR = os.getenv("SITE_CARD_SELECTOR", "").strip()   # optional
 MAX_POSTS = int(os.getenv("MAX_POSTS_PER_RUN", "5"))
+# "0" karoge to doosri sites ki APIs se jobs nahi uthayega (sirf aapki site)
+USE_API_FALLBACK = os.getenv("USE_API_FALLBACK", "1").strip() != "0"
 STATE_FILE = "posted.json"
 
 SKIP = {"it", "non-it", "government", "india", "world", "india + world", "work from home",
@@ -16,6 +18,19 @@ SKIP = {"it", "non-it", "government", "india", "world", "india + world", "work f
         "loading jobs...", "sources loading...", "pages", "blog archive", "followers",
         "labels", "about me", "report abuse", "popular posts", "search this blog",
         "contact form", "subscribe", "menu", "home"}
+
+
+def clean(heads):
+    """Khaali / blank / bahut chhote / skip-list wale headings hata do."""
+    out = []
+    for h in heads:
+        t = html.unescape(h or "").replace("\u200b", "").replace("\xa0", " ").strip()
+        if not re.search(r"\w", t):          # kam se kam ek letter/digit ho
+            continue
+        if len(t) < 6 or t.lower() in SKIP:
+            continue
+        out.append(t)
+    return out
 
 
 def headings_from_feed():
@@ -72,10 +87,10 @@ def headings_from_browser():
     return found
 
 
-
 def headings_from_apis():
     """Site block ho to wahi public job APIs se seedha headings."""
     heads = []
+
     def fetch(url):
         try:
             r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=25)
@@ -84,31 +99,40 @@ def headings_from_apis():
         except Exception as e:
             print(f"[warn] {url[:50]} failed: {e}")
             return {}
+
     heads += [j.get("title", "") for j in fetch("https://remotive.com/api/remote-jobs?limit=40").get("jobs", [])]
     heads += [j.get("title", "") for j in fetch("https://www.arbeitnow.com/api/job-board-api").get("data", [])[:40]]
     heads += [j.get("jobTitle", "") for j in fetch("https://jobicy.com/api/v2/remote-jobs?count=30").get("jobs", [])]
-    return [h.strip() for h in heads if h and len(h.strip()) >= 6]
+    return heads
 
 
 def get_headings():
-    heads = headings_from_feed()
+    # har source ke turant baad clean() lagta hai, taaki khaali feed hone par
+    # agla source (browser / API) sahi se chale
+    heads = clean(headings_from_feed())
+    print(f"[info] feed se {len(heads)} valid headings")
+
     if not heads:
         try:
-            heads = headings_from_browser()
+            heads = clean(headings_from_browser())
+            print(f"[info] browser se {len(heads)} valid headings")
         except Exception as e:
             print("[warn] browser mode failed:", e)
             heads = []
-    if not heads:
+
+    if not heads and USE_API_FALLBACK:
         print("[info] site se nahi mila, APIs se le raha hoon")
-        heads = headings_from_apis()
+        heads = clean(headings_from_apis())
+        print(f"[info] APIs se {len(heads)} valid headings")
+
     seen, uniq = set(), []
     for h in heads:
         if h.lower() not in seen:
             seen.add(h.lower())
             uniq.append(h)
-    print(f"[info] {len(uniq)} headings from site")
+    print(f"[info] {len(uniq)} headings final")
     for h in uniq[:15]:
-        print("   -", h)
+        print("   -", repr(h))
     return uniq
 
 
@@ -144,7 +168,10 @@ def main():
     new = [h for h in get_headings() if key(h) not in seen][:MAX_POSTS]
     posted = 0
     for h in new:
-        msg = (f"🏢 <b>{html.escape(html.unescape(h))}</b>\n\n"
+        title = html.escape(html.unescape(h)).strip()
+        if not title:                            # khaali heading kabhi mat bhejo
+            continue
+        msg = (f"🏢 <b>{title}</b>\n\n"
                f"✅ Hiring now!\n"
                f"👉 <a href=\"{html.escape(APPLY_LINK)}\">Apply Here</a>")
         if send(msg):
