@@ -6,7 +6,7 @@ import requests
 BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"].strip()
 SITE_URL = os.getenv("SITE_URL", "https://coursecertificate231.blogspot.com/")
-APPLY_LINK = os.getenv("APPLY_LINK", "https://coursecertificate231.blogspot.com/2026/11/latest-jobs-in-india-2026-fresher-it.html")
+APPLY_LINK = os.getenv("APPLY_LINK", "https://coursecertificate231.blogspot.com/")
 CARD_SELECTOR = os.getenv("SITE_CARD_SELECTOR", "").strip()   # optional
 MAX_POSTS = int(os.getenv("MAX_POSTS_PER_RUN", "5"))
 STATE_FILE = "posted.json"
